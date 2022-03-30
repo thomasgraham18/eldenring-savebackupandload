@@ -15,12 +15,13 @@ namespace eldenringsavebackup
     {
         string userPath;
         string backupPath;
+
         public ERSaveLoader()
         {
             InitializeComponent();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void btnBackup_Click(object sender, EventArgs e)
         {
             string sourceFile1 = $"{userPath}\\ER0000.sl2";
             string sourceFile2 = $"{userPath}\\ER0000.sl2.bak";
@@ -60,11 +61,6 @@ namespace eldenringsavebackup
             }
         }
 
-        private void ERSaveLoader_Load(object sender, EventArgs e)
-        {
-         
-        }
-
         private void btnBackupLocation_Click(object sender, EventArgs e)
         {
             fbdBackup.RootFolder = Environment.SpecialFolder.ApplicationData;
@@ -83,7 +79,8 @@ namespace eldenringsavebackup
             userPath = fbdSave.SelectedPath;
             btnBackupLocation.Enabled = true;
             btnSaveLocation.Enabled = false;
-
+            btnBackup.Enabled = false;
+            btnLoad.Enabled = false;
         }
 
     }

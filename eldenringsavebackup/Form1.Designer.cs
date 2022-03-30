@@ -47,7 +47,7 @@
             this.btnBackup.TabIndex = 0;
             this.btnBackup.Text = "Backup";
             this.btnBackup.UseVisualStyleBackColor = false;
-            this.btnBackup.Click += new System.EventHandler(this.button1_Click);
+            this.btnBackup.Click += new System.EventHandler(this.btnBackup_Click);
             // 
             // btnLoad
             // 
@@ -93,7 +93,6 @@
             this.Controls.Add(this.btnBackup);
             this.Name = "ERSaveLoader";
             this.Text = "ER Save Load/Backup";
-            this.Load += new System.EventHandler(this.ERSaveLoader_Load);
             this.ResumeLayout(false);
 
         }
