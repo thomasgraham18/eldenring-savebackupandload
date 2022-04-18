@@ -235,6 +235,8 @@ namespace eldenringsavebackup
             panel2.BackColor = Color.FromArgb(90, Color.Black);
         }
 
+        #region SaveBackup Code
+
         private void btnBackup_Click(object sender, EventArgs e)
         {
             // Using user set path to set variables to correct file location
@@ -393,11 +395,13 @@ namespace eldenringsavebackup
             lblLocation.Text = "Save and backup location stored and ready for use";
         }
 
+        // Close from on click
         private void btnClose_Click(object sender, EventArgs e)
         {
             this.Close();
         }
 
+        // If mousedown, move window
         private void ERSaveLoader_MouseDown(object sender,
         System.Windows.Forms.MouseEventArgs e)
         {
@@ -408,6 +412,7 @@ namespace eldenringsavebackup
             }
         }
 
+        // If mousedown, move window
         private void pnlTitle_MouseDown(object sender,
         System.Windows.Forms.MouseEventArgs e)
         {
@@ -439,5 +444,7 @@ namespace eldenringsavebackup
                 Application.DoEvents();
             }
         }
+
+        #endregion
     }
 }

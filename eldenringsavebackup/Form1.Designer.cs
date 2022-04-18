@@ -116,6 +116,7 @@
             // lblLocation
             // 
             this.lblLocation.AutoSize = true;
+            this.lblLocation.BackColor = System.Drawing.Color.Transparent;
             this.lblLocation.Font = new System.Drawing.Font("Mantinia", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.lblLocation.ForeColor = System.Drawing.SystemColors.ControlLightLight;
             this.lblLocation.Location = new System.Drawing.Point(37, 69);
