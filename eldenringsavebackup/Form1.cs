@@ -35,25 +35,82 @@ namespace eldenringsavebackup
         public static extern int SendMessage(IntPtr hWnd,
                  int Msg, int wParam, int lParam);
         [DllImportAttribute("user32.dll")]
+
         public static extern bool ReleaseCapture();
+
+        public ERSaveLoader()
+        {
+            InitializeComponent();
+
+            // Opacity
+            panel1.BackColor = Color.FromArgb(90, Color.Black);
+            panel2.BackColor = Color.FromArgb(90, Color.Black);
+        }
+
+        private void ERSaveLoader_Load(object sender, EventArgs e)
+        {
+            _fileManager = new FileManager();
+
+            cboFromSaveSlot.DisplayMember = "CharacterName";
+            //cboFromSaveSlot.DataSource = this.sourceSaveGames;
+            cboFromSaveSlot.DataSource = new BindingSource() { DataSource = this.sourceSaveGames }.DataSource;
+            cboToSaveSlot.DisplayMember = "CharacterName";
+            //cboToSaveSlot.DataSource = this.targetSaveGames;
+            cboToSaveSlot.DataSource = new BindingSource() { DataSource = this.targetSaveGames }.DataSource;
+
+            //Usefull for debugging
+            //Properties.Settings.Default.Reset(); 
+
+            //Set lbl default txt
+            lblLocation.Text = "Please choose your save and backup location!";
+
+            // Check if user settings are empty, if so return program to normal state, if not, set global variables as stored paths @Credits to Jacques
+            if (Properties.Settings.Default.SaveLocation != "")
+            {
+                userPath = Properties.Settings.Default.SaveLocation;
+            }
+            else
+            {
+                return;
+            }
+            if (Properties.Settings.Default.BackupLocation != "")
+            {
+                backupPath = Properties.Settings.Default.BackupLocation;
+            }
+            else
+            {
+                return;
+            }
+
+            //Change to text to show user saved paths
+            txtBackupLocation.Text = backupPath;
+            txtSaveLocation.Text = userPath;
+
+            // If user has stored paths, set all buttons to enabled to give user full functionality
+            btnBackup.Enabled = true;
+            btnLoad.Enabled = true;
+            btnBackupLocation.Enabled = true;
+            btnSaveLocation.Enabled = true;
+
+            // Set lbl to tell user saved are locations are ready for use
+            lblLocation.Text = "Save and backup location stored and ready for use";
+        }
 
         #region SaveCopy Code
 
         private void CheckButtonState()
         {
-                btnCopy.Text = "Copy";
-                if (_fileManager.SourceFile.Length > 0 && _fileManager.TargetFile.Length > 0
-                    && _fileManager.SourcePath != _fileManager.TargetPath &&
-                    this.selectedSourceSave.Id != Guid.Empty && this.selectedTargetSave.Id != Guid.Empty)
-                {
-                    btnCopy.Enabled = true;
-                    // btnCopy.BackColor = Color.Lime;
-                }
-                else
-                {
-                    btnCopy.Enabled = false;
-                    //btnCopy.BackColor = Color.SeaGreen;
-                }
+            btnCopy.Text = "Copy";
+            if (_fileManager.SourceFile.Length > 0 && _fileManager.TargetFile.Length > 0
+                && _fileManager.SourcePath != _fileManager.TargetPath &&
+                this.selectedSourceSave.Id != Guid.Empty && this.selectedTargetSave.Id != Guid.Empty)
+            {
+                btnCopy.Enabled = true;
+            }
+            else
+            {
+                btnCopy.Enabled = false;
+            }
 
         }
 
@@ -91,6 +148,82 @@ namespace eldenringsavebackup
         private int HeaderStartIndex(SaveGame save)
         {
             return (SaveGame.SAVE_HEADER_START_INDEX + (save.Index * SaveGame.SAVE_HEADER_LENGTH));
+        }
+
+        private void btnSourceFile_Click(object sender, EventArgs e)
+        {
+            sourceSaveGames.Clear(); // Reset source save
+
+            // Open folder dialog
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Elden Ring Save File |ER0000.sl2";
+            DialogResult result = openFileDialog.ShowDialog();
+
+            // If user clicks ok
+            if (result == DialogResult.OK)
+            {
+                _fileManager.SourcePath = openFileDialog.FileName; // Set target path of user selected file
+                try
+                {
+                    _fileManager.SourceFile = File.ReadAllBytes(_fileManager.SourcePath); // Set target file as selected target file
+                    txtSourceFile.Text = _fileManager.SourcePath; // Set txtbox to show selected path
+
+                    // For each save slot (10) declare a new save, and if its active load the save data,
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var newSave = new SaveGame();
+                        newSave.LoadData(_fileManager.SourceFile, i);
+                        if (newSave.Active)
+                        {
+                            sourceSaveGames.Add(newSave);
+                        }
+                    }
+                }
+                catch (IOException)
+                {
+                    txtSourceFile.Text = "Failed to load";
+                }
+            }
+            CheckButtonState();
+        }
+
+        private void btnDestFile_Click(object sender, EventArgs e)
+        {
+            targetSaveGames.Clear(); // Reset target save
+
+            // Open folder dialog
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Elden Ring Save File |ER0000.sl2";
+            DialogResult result = openFileDialog.ShowDialog();
+
+            // If user clicks ok
+            if (result == DialogResult.OK)
+            {
+                _fileManager.TargetPath = openFileDialog.FileName; // Set target path of user selected file
+
+                try
+                {
+                    _fileManager.TargetFile = File.ReadAllBytes(_fileManager.TargetPath); // Set target file as selected target file
+                    txtDestFile.Text = _fileManager.TargetPath; // Set txtbox to show selected path
+
+                    // For each save slot (10), declare a new save, load the save data, if its not active, just call it slot, else load and add character
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var newSave = new SaveGame();
+                        newSave.LoadData(_fileManager.TargetFile, i);
+                        if (!newSave.Active)
+                        {
+                            newSave.CharacterName = $"Slot {i + 1}";
+                        }
+                        targetSaveGames.Add(newSave);
+                    }
+                }
+                catch (IOException)
+                {
+                    txtSourceFile.Text = "Failed to load";
+                }
+            }
+            CheckButtonState();
         }
 
         private void btnCopy_Click(object sender, EventArgs e)
@@ -134,8 +267,6 @@ namespace eldenringsavebackup
                     Array.Copy(md5.Hash, 0, newSave, SaveGame.SAVE_HEADERS_SECTION_START_INDEX - 0x10, 0x10);
                 }
 
-
-
                 //Write temp file to target file
                 File.WriteAllBytes(_fileManager.TargetPath, newSave);
 
@@ -147,7 +278,6 @@ namespace eldenringsavebackup
                 cboToSaveSlot.SelectedIndex = targetSave.Index;
 
                 //Indicate successful copy
-
                 btnCopy.Text = "Complete";
             }
             catch (Exception _e)
@@ -160,80 +290,7 @@ namespace eldenringsavebackup
             }
 
         }
-
-        private void btnSourceFile_Click(object sender, EventArgs e)
-        {
-            sourceSaveGames.Clear();
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "Elden Ring Save File |ER0000.sl2";
-            DialogResult result = openFileDialog.ShowDialog(); // Show the dialog.
-            if (result == DialogResult.OK) // Test result.
-            {
-                _fileManager.SourcePath = openFileDialog.FileName;
-                try
-                {
-                    _fileManager.SourceFile = File.ReadAllBytes(_fileManager.SourcePath);
-                    txtSourceFile.Text = _fileManager.SourcePath;
-
-                    for (int i = 0; i < 10; i++)
-                    {
-                        var newSave = new SaveGame();
-                        newSave.LoadData(_fileManager.SourceFile, i);
-                        if (newSave.Active)
-                        {
-                            sourceSaveGames.Add(newSave);
-                        }
-                    }
-                }
-                catch (IOException)
-                {
-                    txtSourceFile.Text = "Failed to load";
-                }
-            }
-            CheckButtonState();
-        }
-
-        private void btnDestFile_Click(object sender, EventArgs e)
-        {
-            targetSaveGames.Clear();
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "Elden Ring Save File |ER0000.sl2";
-            DialogResult result = openFileDialog.ShowDialog();
-            if (result == DialogResult.OK)
-            {
-                _fileManager.TargetPath = openFileDialog.FileName;
-                try
-                {
-                    _fileManager.TargetFile = File.ReadAllBytes(_fileManager.TargetPath);
-                    txtDestFile.Text = _fileManager.TargetPath;
-
-                    for (int i = 0; i < 10; i++)
-                    {
-                        var newSave = new SaveGame();
-                        newSave.LoadData(_fileManager.TargetFile, i);
-                        if (!newSave.Active)
-                        {
-                            newSave.CharacterName = $"Slot {i + 1}";
-                        }
-                        targetSaveGames.Add(newSave);
-                    }
-                }
-                catch (IOException)
-                {
-                    txtSourceFile.Text = "Failed to load";
-                }
-            }
-            CheckButtonState();
-        }
-
-
         #endregion
-        public ERSaveLoader()
-        {
-            InitializeComponent();
-            panel1.BackColor = Color.FromArgb(90, Color.Black);
-            panel2.BackColor = Color.FromArgb(90, Color.Black);
-        }
 
         #region SaveBackup Code
 
@@ -294,11 +351,11 @@ namespace eldenringsavebackup
         private void btnSaveLocation_Click(object sender, EventArgs e)
         {
             // Set root folder as %appdata% & show the choose folder dialog
-            fbdSave.RootFolder = Environment.SpecialFolder.ApplicationData; 
-            fbdSave.ShowDialog(); 
+            fbdSave.RootFolder = Environment.SpecialFolder.ApplicationData;
+            fbdSave.ShowDialog();
 
             // Set global variable as user selected location
-            userPath = fbdSave.SelectedPath; 
+            userPath = fbdSave.SelectedPath;
 
             // Set buttons to guide user to choose backup location
             btnBackupLocation.Enabled = true;
@@ -319,7 +376,7 @@ namespace eldenringsavebackup
             fbdBackup.ShowDialog();
 
             // If user has selected the same path for backup as save, first: let them know, second: stop them.
-            if(fbdBackup.SelectedPath == fbdSave.SelectedPath)
+            if (fbdBackup.SelectedPath == fbdSave.SelectedPath)
             {
                 MessageBox.Show("Please choose/create a folder for BACKUPS, you selected your save folder twice");
                 return;
@@ -343,56 +400,6 @@ namespace eldenringsavebackup
             // Change label to let user know information has been saved
             lblLocation.Text = "Save and backup location stored and ready for use";
 
-        }
-
-        private void ERSaveLoader_Load(object sender, EventArgs e)
-        {
-            _fileManager = new FileManager();
-
-            cboFromSaveSlot.DisplayMember = "CharacterName";
-            //cboFromSaveSlot.DataSource = this.sourceSaveGames;
-            cboFromSaveSlot.DataSource = new BindingSource() { DataSource = this.sourceSaveGames }.DataSource;
-            cboToSaveSlot.DisplayMember = "CharacterName";
-            //cboToSaveSlot.DataSource = this.targetSaveGames;
-            cboToSaveSlot.DataSource = new BindingSource() { DataSource = this.targetSaveGames }.DataSource;
-
-
-            //Usefull for debugging
-            //Properties.Settings.Default.Reset(); 
-
-            //Set lbl default txt
-            lblLocation.Text = "Please choose your save and backup location!";
-
-            // Check if user settings are empty, if so return program to normal state, if not, set global variables as stored paths @Credits to Jacques
-            if (Properties.Settings.Default.SaveLocation != "")
-            {
-                userPath = Properties.Settings.Default.SaveLocation;
-            }
-            else
-            {
-                return;
-            }
-            if (Properties.Settings.Default.BackupLocation != "")
-            {
-                backupPath = Properties.Settings.Default.BackupLocation;
-            }
-            else
-            {
-                return;
-            }
-
-            //Change to text to show user saved paths
-            txtBackupLocation.Text = backupPath;
-            txtSaveLocation.Text = userPath;
-
-            // If user has stored paths, set all buttons to enabled to give user full functionality
-            btnBackup.Enabled = true;
-            btnLoad.Enabled = true;
-            btnBackupLocation.Enabled = true;
-            btnSaveLocation.Enabled = true;
-
-            // Set lbl to tell user saved are locations are ready for use
-            lblLocation.Text = "Save and backup location stored and ready for use";
         }
 
         // Close from on click
